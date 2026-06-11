@@ -65,10 +65,22 @@ opencode run "call memoryList and show the result"
 
 | Data | Path |
 |------|------|
+| Plugin entrypoint | `~/.config/opencode/plugins/opencode-agent-memory-tools/index.ts` |
+| Plugin helper modules | `~/.config/opencode/plugins/opencode-agent-memory-tools/*.ts` |
 | Global memory (user prefs, persona) | `~/.config/opencode/memory/*.md` |
 | Project memory (codebase notes) | `.opencode/memory/*.md` (gitignored) |
 | Journal entries | `~/.config/opencode/journal/*.md` |
 | Config | `~/.config/opencode/agent-memory.json` |
+
+### OpenCode loading note
+
+OpenCode auto-loads files directly under `~/.config/opencode/plugins/`.
+This installer keeps the actual plugin entrypoint at
+`plugins/opencode-agent-memory-tools/index.ts` and keeps helper modules in the
+same subdirectory. Do not copy helper files such as
+`opencode-agent-memory-tools-memory.ts` or
+`opencode-agent-memory-tools-guidance.ts` into the plugins root; they are imports,
+not standalone plugins.
 
 ### Configuration
 
@@ -223,6 +235,7 @@ journalWrite({
 - Re-read with `memoryGet` before assuming context; blocks may have changed
 - Journal is **append-only** — never edit old entries
 - Never store secrets in memory or journal
+- Keep memory helper modules in the plugin subdirectory; only `index.ts` is the plugin entrypoint
 
 <!-- END_AGENT_README -->
 
