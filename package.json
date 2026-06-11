@@ -1,6 +1,10 @@
 {
   "name": "opencode-agent-memory-tools",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stevenke1981/opencode-agent-memory-tools-.git"
+  },
   "description": "OpenCode plugin: Letta-style persistent memory + journal with LLM guidance (inspired by ChatGPT memory and Claude Code)",
   "type": "module",
   "main": "src/index.ts",

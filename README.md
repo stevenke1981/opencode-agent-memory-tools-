@@ -1,61 +1,38 @@
 # opencode-agent-memory-tools
 
-Global [OpenCode](https://opencode.ai) plugin wrapping [opencode-agent-memory](https://github.com/joshuadavidthomas/opencode-agent-memory) with **camelCase tools**, **LLM auto-guidance**, and enhancements inspired by **ChatGPT memory**, **Claude Code CLAUDE.md**, and **Codex project context**.
+[![OpenCode Plugin](https://img.shields.io/badge/OpenCode-plugin-blue)](https://opencode.ai/docs/plugins/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Based on the [opencode-git-tools](https://github.com/stevenke1981/opencode-git-tools) plugin pattern.
+Persistent, self-editable **memory blocks** and an append-only **journal** for [OpenCode](https://opencode.ai) — packaged as typed `memory*` / `journal*` plugin tools with LLM auto-guidance.
 
-## Features
+Wraps and extends [opencode-agent-memory](https://github.com/joshuadavidthomas/opencode-agent-memory) (Letta-style blocks), with patterns from **ChatGPT memory**, **Claude Code CLAUDE.md**, and **Codex project context**.
 
-### Memory blocks (Letta-style, editable)
+Repository: https://github.com/stevenke1981/opencode-agent-memory-tools-
 
-Persistent markdown blocks injected into the system prompt — survive sessions and context compaction.
+---
 
-| Block | Scope | Inspired by |
-|-------|-------|-------------|
-| `persona` | global | Agent behavior |
-| `human` | global | ChatGPT user memory |
-| `preferences` | global | Coding/tool preferences |
-| `project` | project | CLAUDE.md / AGENTS.md |
-| `conventions` | project | Discovered team rules |
+## For humans — quick start
 
-### Tools (13 total)
+### What it does
 
-| Tool | Description |
-|------|-------------|
-| `memoryList` | List all blocks |
-| `memoryGet` | Read one block (**new**) |
-| `memorySet` | Full overwrite |
-| `memoryReplace` | Substring replace |
-| `memoryAppend` | Append text (**new**) |
-| `memoryRemember` | ChatGPT-style "remember this" (**new**) |
-| `memoryForget` | Remove matching lines (**new**) |
-| `memoryDelete` | Delete a block (**new**) |
-| `memorySearch` | Grep across blocks (**new**) |
-| `memoryRecap` | Quick overview (**new**) |
-| `journalWrite` | Append-only session diary |
-| `journalRead` | Read entry by ID |
-| `journalSearch` | Semantic search (local embeddings) |
+- **Memory blocks** — markdown files the agent can read and edit across sessions (survives context compaction)
+- **Journal** — append-only diary with local semantic search for decisions and discoveries
+- **Plugin tools** — AI uses `memoryRemember`, `memoryGet`, `journalWrite`, etc. instead of bash-editing files
+- **Auto-guidance** — plugin tells the LLM when to use memory tools (on "remember", "recall", etc.)
 
-### LLM guidance (4 layers)
-
-1. `config.instructions` — when to use / skip memory tools
-2. System prompt — memory blocks always in context
-3. Intent detection — injects full guide on "remember", "recall", etc.
-4. `session.compacting` — workflow survives compression
-
-## Requirements
+### Requirements
 
 - [OpenCode](https://opencode.ai/) v1.0.115+
-- Node.js (for global plugin dependencies)
+- Node.js (installer pulls plugin dependencies into `~/.config/opencode/`)
 
-## Install
+### Install
 
 ```bash
-git clone https://github.com/stevenke1981/opencode-agent-memory-tools.git
-cd opencode-agent-memory-tools
+git clone https://github.com/stevenke1981/opencode-agent-memory-tools-.git
+cd opencode-agent-memory-tools-
 ```
 
-**Windows:**
+**Windows (PowerShell):**
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install.ps1
@@ -67,50 +44,33 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 bash install.sh
 ```
 
-Restart OpenCode after install. First run seeds default memory blocks.
+Restart OpenCode. First run seeds default memory blocks.
 
-## Verify
+### Verify
 
 ```bash
 opencode run "call memoryList and show the result"
 ```
 
-## Usage examples
+### Slash commands
 
-### Remember a user preference (ChatGPT-style)
+| Command | What it does |
+|---------|--------------|
+| `/memory-guide` | Load full when/how-to guide for the agent |
+| `/memory-remember <fact>` | ChatGPT-style "remember this" |
+| `/memory-recap` | Show everything stored in memory blocks |
+| `/journal-search <query>` | Search past session notes |
 
-```
-memoryRemember({ fact: "Prefers pnpm and TypeScript strict mode" })
-```
+### Where data lives
 
-### Save project knowledge (Claude Code-style)
+| Data | Path |
+|------|------|
+| Global memory (user prefs, persona) | `~/.config/opencode/memory/*.md` |
+| Project memory (codebase notes) | `.opencode/memory/*.md` (gitignored) |
+| Journal entries | `~/.config/opencode/journal/*.md` |
+| Config | `~/.config/opencode/agent-memory.json` |
 
-```
-memoryAppend({
-  scope: "project",
-  label: "project",
-  text: "Build: pnpm build. Tests: pnpm test. Routes in src/routes/"
-})
-```
-
-### Recall before work
-
-```
-memorySearch({ query: "build command" })
-journalSearch({ text: "auth refactor" })
-```
-
-### Journal a decision
-
-```
-journalWrite({
-  title: "Chose SQLite over Postgres for local dev",
-  body: "Simpler setup; prod uses Postgres anyway.",
-  tags: "decision, architecture"
-})
-```
-
-## Configuration
+### Configuration
 
 `~/.config/opencode/agent-memory.json` (created on install):
 
@@ -128,45 +88,148 @@ journalWrite({
 
 Set `"journal.enabled": false` to disable journal tools.
 
-## Slash commands
+### Default memory blocks
 
-| Command | Description |
-|---------|-------------|
-| `/memory-guide` | Load when/how-to-use guide |
-| `/memory-remember <fact>` | ChatGPT-style remember |
-| `/memory-recap` | Show all stored memory |
-| `/journal-search <query>` | Search past session notes |
+| Block | Scope | Purpose |
+|-------|-------|---------|
+| `persona` | global | How the agent behaves |
+| `human` | global | Facts about the user (ChatGPT-style) |
+| `preferences` | global | Coding/tool preferences |
+| `project` | project | Build commands, architecture (CLAUDE.md-style) |
+| `conventions` | project | Discovered team/project rules |
 
-## Storage locations
-
-| Data | Path |
-|------|------|
-| Global memory | `~/.config/opencode/memory/*.md` |
-| Project memory | `.opencode/memory/*.md` |
-| Journal | `~/.config/opencode/journal/*.md` |
-| Config | `~/.config/opencode/agent-memory.json` |
-
-## Project structure
-
-```
-opencode-agent-memory-tools/
-├── src/
-│   ├── index.ts                              # Plugin entry
-│   ├── opencode-agent-memory-tools-guidance.ts
-│   ├── opencode-agent-memory-tools-memory.ts
-│   ├── opencode-agent-memory-tools-journal.ts
-│   └── ...
-├── commands/
-├── docs/LLM_USAGE.md
-└── scripts/install-global.mjs
-```
-
-## Credits
+### Credits
 
 - [opencode-agent-memory](https://github.com/joshuadavidthomas/opencode-agent-memory) by Josh Thomas (MIT)
 - Memory architecture from [Letta](https://github.com/letta-ai/letta)
-- Patterns from ChatGPT memory, Claude Code, OpenAI Codex
+- Plugin pattern from [opencode-git-tools](https://github.com/stevenke1981/opencode-git-tools)
 
-## License
+### License
 
 MIT
+
+---
+
+## For AI agents — operating instructions
+
+<!-- AGENT_README: opencode-agent-memory-tools v1.0 -->
+
+You have **memory\*** and **journal\*** plugin tools. **Prefer them** over editing `~/.config/opencode/memory/*.md` directly, over bash, or over stuffing facts into chat context.
+
+### Decision: when to USE memory tools
+
+Use memory tools if **any** of these is true:
+
+| Signal | Tool |
+|--------|------|
+| User says "remember" / "記住" | `memoryRemember` |
+| User says "forget" / "忘記" | `memoryForget` |
+| User asks what you remember | `memoryRecap` |
+| Need a specific stored fact | `memoryGet`, `memorySearch` |
+| Save project convention / build cmd | `memoryAppend` on `scope: "project"` |
+| Before complex task — recall history | `journalSearch`, `memorySearch` |
+| After significant decision | `journalWrite` |
+
+**Optional session start:** `memoryRecap` or `memoryList`
+**After learning durable fact:** `memoryRemember` or `memoryAppend`
+
+### Decision: when NOT to use
+
+| Situation | Use instead |
+|-----------|-------------|
+| Passwords, API keys, tokens | Never store — refuse politely |
+| Full file contents | `Read` / `Grep` |
+| Ephemeral debug output | Do not persist |
+| Git / shell / file edits | Other plugin tools |
+| User did not ask for persistence | Skip memory write |
+
+### Standard workflow
+
+```
+memoryList / memoryRecap
+  → memoryGet / memorySearch / journalSearch   (recall)
+  → memoryRemember / memoryAppend / memorySet  (update)
+  → journalWrite                               (after big decisions)
+```
+
+### Tool reference
+
+| Tool | When | Key args |
+|------|------|----------|
+| `memoryList` | See all blocks | `scope`: all / global / project |
+| `memoryGet` | Read one block | `label`, `scope` |
+| `memorySet` | Full overwrite | `label`, `value`, `scope` |
+| `memoryReplace` | Surgical edit | `label`, `oldText`, `newText` |
+| `memoryAppend` | Add without overwrite | `label`, `text`, `scope` |
+| `memoryRemember` | "Remember X" | `fact`; default `global:human` |
+| `memoryForget` | Remove lines | `text`, `label`, `scope` |
+| `memoryDelete` | Delete block | `label`, `scope` |
+| `memorySearch` | Grep blocks | `query`, `scope` |
+| `memoryRecap` | Quick overview | `scope`, `maxChars` |
+| `journalWrite` | Log decision | `title`, `body`, `tags` |
+| `journalRead` | Read by ID | `id` |
+| `journalSearch` | Semantic recall | `text`, `project`, `tags` |
+
+**Scopes:**
+- `global` — user prefs, persona (like ChatGPT memory)
+- `project` — codebase notes (like CLAUDE.md); default for `memorySet`/`memoryAppend`
+
+### Call examples
+
+```javascript
+// ChatGPT-style remember
+memoryRemember({ fact: "User prefers pnpm and TypeScript strict mode" })
+
+// Claude Code-style project note
+memoryAppend({
+  scope: "project",
+  label: "project",
+  text: "Build: pnpm build. Test: pnpm test. API routes in src/routes/"
+})
+
+// Recall before work
+memorySearch({ query: "test command" })
+journalSearch({ text: "authentication refactor" })
+
+// Journal a decision
+journalWrite({
+  title: "Chose Zod over Yup",
+  body: "Zod already in deps; better TS inference.",
+  tags: "decision, architecture"
+})
+```
+
+### Memory block map
+
+| Block | Scope | Store here |
+|-------|-------|------------|
+| `persona` | global | Agent tone, expertise, workflow |
+| `human` | global | User name, habits, constraints |
+| `preferences` | global | Formatting, libs, commit style |
+| `project` | project | Commands, architecture, gotchas |
+| `conventions` | project | Naming, patterns, review rules |
+
+### Plugin guidance layers (already active)
+
+1. **System prompt** — memory block contents injected automatically
+2. **config.instructions** — short decision rules every session
+3. **Intent detection** — full guide injected on remember/recall keywords
+4. **session.compacting** — workflow summary after context compression
+5. **`/memory-guide`** — user can force-load this guide
+
+### Rules
+
+- Keep blocks **concise and high-signal** — not transcripts or file dumps
+- Re-read with `memoryGet` before assuming context; blocks may have changed
+- Journal is **append-only** — never edit old entries
+- Never store secrets in memory or journal
+
+<!-- END_AGENT_README -->
+
+---
+
+## More documentation
+
+- [docs/LLM_USAGE.md](docs/LLM_USAGE.md) — extended LLM guide (中文)
+- [agent-memory.json.example](agent-memory.json.example) — config template
+- [opencode.json.example](opencode.json.example) — OpenCode plugin registration
