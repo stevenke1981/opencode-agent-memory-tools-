@@ -1,0 +1,11 @@
+{
+  "journal": {
+    "enabled": true,
+    "tags": [
+      { "name": "decision", "description": "Architecture or design decisions" },
+      { "name": "debugging", "description": "Debugging sessions and root causes" },
+      { "name": "convention", "description": "Discovered project conventions" },
+      { "name": "perf", "description": "Performance optimization work" }
+    ]
+  }
+}
