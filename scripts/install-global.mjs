@@ -14,7 +14,8 @@ const CONFIG_DIR = process.env.OPENCODE_CONFIG_DIR
 
 const PLUGINS_DIR = path.join(CONFIG_DIR, "plugins");
 const COMMANDS_DIR = path.join(CONFIG_DIR, "commands");
-const TARGET_PLUGIN = path.join(PLUGINS_DIR, PLUGIN_FILE);
+const TARGET_PLUGIN_DIR = path.join(PLUGINS_DIR, PLUGIN_NAME);
+const TARGET_PLUGIN = path.join(TARGET_PLUGIN_DIR, "index.ts");
 
 const SUPPORT_FILES = [
   "opencode-agent-memory-tools-guidance.ts",
@@ -25,6 +26,7 @@ const SUPPORT_FILES = [
   "opencode-agent-memory-tools-prompt.ts",
   "opencode-agent-memory-tools-embeddings.ts",
 ];
+const OLD_ROOT_FILES = [PLUGIN_FILE, ...SUPPORT_FILES];
 
 const DEPS = {
   "@opencode-ai/plugin": "1.16.2",
@@ -126,22 +128,20 @@ async function registerInConfig(pluginEntry) {
   }
 
   const raw = await fs.readFile(configFile, "utf8");
-  if (raw.includes(PLUGIN_NAME)) {
-    console.log(`Plugin already referenced in ${configFile}`);
-    return;
+  let config;
+  try {
+    const stripped = raw.replace(/^\s*\/\/.*$/gm, "").replace(/,\s*([}\]])/g, "$1");
+    config = JSON.parse(stripped);
+  } catch {
+    throw new Error(`Could not parse ${configFile}. Add manually to "plugin": ["${pluginEntry}"]`);
   }
 
-  const pluginLine = `    "${pluginEntry}"`;
-  let updated;
-  if (/"plugin"\s*:\s*\[/.test(raw)) {
-    updated = raw.replace(/("plugin"\s*:\s*\[)([\s\S]*?)(\])/m, (_m, open, inner, close) => {
-      const sep = inner.trim() ? ",\n" : "\n";
-      return `${open}${inner.replace(/\s*,\s*$/, "")}${sep}${pluginLine}\n  ${close}`;
-    });
-  } else {
-    updated = raw.replace(/\{/, `{\n  "plugin": [\n${pluginLine}\n  ],`);
-  }
-  await fs.writeFile(configFile, updated, "utf8");
+  config.plugin = Array.isArray(config.plugin) ? config.plugin : [];
+  config.plugin = config.plugin.filter(
+    (p) => typeof p !== "string" || !p.includes(PLUGIN_NAME),
+  );
+  config.plugin.push(pluginEntry);
+  await fs.writeFile(configFile, JSON.stringify(config, null, 2) + "\n", "utf8");
   console.log(`Registered plugin in ${configFile}`);
 }
 
@@ -150,17 +150,19 @@ async function main() {
   console.log(`Config dir: ${CONFIG_DIR}`);
 
   await fs.mkdir(PLUGINS_DIR, { recursive: true });
+  await fs.mkdir(TARGET_PLUGIN_DIR, { recursive: true });
   await fs.mkdir(COMMANDS_DIR, { recursive: true });
   await fs.mkdir(path.join(CONFIG_DIR, "memory"), { recursive: true });
   await fs.mkdir(path.join(CONFIG_DIR, "journal"), { recursive: true });
 
-  await fs.copyFile(path.join(ROOT, "src", "index.ts"), TARGET_PLUGIN);
-  console.log(`Plugin -> ${TARGET_PLUGIN}`);
+  for (const file of OLD_ROOT_FILES) {
+    await fs.rm(path.join(PLUGINS_DIR, file), { force: true });
+  }
 
-  for (const file of SUPPORT_FILES) {
-    const dest = path.join(PLUGINS_DIR, file);
+  for (const file of await fs.readdir(path.join(ROOT, "src"))) {
+    const dest = path.join(TARGET_PLUGIN_DIR, file);
     await fs.copyFile(path.join(ROOT, "src", file), dest);
-    console.log(`Module -> ${dest}`);
+    console.log(`${file === "index.ts" ? "Plugin" : "Module"} -> ${dest}`);
   }
 
   if (await exists(path.join(ROOT, "commands"))) {
@@ -178,6 +180,7 @@ async function main() {
   await registerInConfig(pluginEntry);
 
   console.log("\nDone! Restart OpenCode to load the plugin.");
+  console.log(`Plugin entry: ${toConfigPath(TARGET_PLUGIN)}`);
   console.log("Memory: ~/.config/opencode/memory/ (global) + .opencode/memory/ (project)");
   console.log("Journal: ~/.config/opencode/journal/ (semantic search, enabled by default)");
   console.log("Tools: memoryList, memoryGet, memorySet, memoryReplace, memoryAppend, memoryRemember, memoryForget, memoryDelete, memorySearch, memoryRecap, journalWrite, journalRead, journalSearch");
